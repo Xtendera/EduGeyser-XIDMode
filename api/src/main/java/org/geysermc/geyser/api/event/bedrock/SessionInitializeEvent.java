@@ -27,12 +27,40 @@ package org.geysermc.geyser.api.event.bedrock;
 
 import org.geysermc.geyser.api.connection.GeyserConnection;
 import org.geysermc.geyser.api.event.connection.ConnectionEvent;
+import org.geysermc.geyser.api.network.RemoteServer;
+import org.geysermc.geyser.api.util.PlatformType;
+
+import java.util.Objects;
 
 /**
  * Called when Geyser initialises a session for a new bedrock client.
  */
 public final class SessionInitializeEvent extends ConnectionEvent {
-    public SessionInitializeEvent(GeyserConnection connection) {
+    private RemoteServer remoteServer;
+
+    public SessionInitializeEvent(GeyserConnection connection, RemoteServer remoteServer) {
         super(connection);
+        this.remoteServer = remoteServer;
+    }
+
+    /**
+     * Gets the {@link RemoteServer} the session will connect to.
+     *
+     * @return the remote server for this session
+     */
+    public RemoteServer remoteServer() {
+        return this.remoteServer;
+    }
+
+    /**
+     * Sets the {@link RemoteServer} for this session. Unlike {@link SessionLoginEvent#remoteServer(RemoteServer)},
+     * this runs before authentication, so the {@link RemoteServer#authType()} of the given server decides
+     * whether the session logs in to the Java server with a Microsoft account or connects in offline mode.
+     * This method will only work as expected on {@link PlatformType#STANDALONE}.
+     *
+     * @param remoteServer the remote server for this session
+     */
+    public void remoteServer(RemoteServer remoteServer) {
+        this.remoteServer = Objects.requireNonNull(remoteServer, "remoteServer");
     }
 }

@@ -57,6 +57,7 @@ import org.geysermc.floodgate.crypto.Base64Topping;
 import org.geysermc.floodgate.crypto.FloodgateCipher;
 import org.geysermc.floodgate.news.NewsItemAction;
 import org.geysermc.geyser.api.GeyserApi;
+import org.geysermc.geyser.api.auth.JavaCredentialStore;
 import org.geysermc.geyser.api.command.CommandSource;
 import org.geysermc.geyser.api.event.EventRegistrar;
 import org.geysermc.geyser.api.event.lifecycle.GeyserDefineCustomBlocksEvent;
@@ -204,6 +205,8 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
     private PendingMicrosoftAuthentication pendingMicrosoftAuthentication;
     @Getter(AccessLevel.NONE)
     private Map<String, String> savedAuthChains;
+    @Getter(AccessLevel.NONE)
+    private volatile @Nullable JavaCredentialStore javaCredentialStore;
 
     @Getter
     private static GeyserImpl instance;
@@ -848,6 +851,16 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
     }
 
     @Override
+    public @Nullable JavaCredentialStore javaCredentialStore() {
+        return this.javaCredentialStore;
+    }
+
+    @Override
+    public void javaCredentialStore(@Nullable JavaCredentialStore store) {
+        this.javaCredentialStore = store;
+    }
+
+    @Override
     @NonNull
     public BedrockListener bedrockListener() {
         return config().bedrock();
@@ -933,13 +946,41 @@ public class GeyserImpl implements GeyserApi, EventRegistrar {
         return bootstrap.getWorldManager();
     }
 
-    @Nullable
-    public String authChainFor(@NonNull String bedrockName) {
-        return savedAuthChains.get(bedrockName);
+    /**
+     * Whether the Microsoft login of this session may be saved, either by a registered
+     * {@link JavaCredentialStore} or through the saved-user-logins config option.
+     */
+    public boolean canSaveAuthChain(@NonNull GeyserSession session) {
+        return javaCredentialStore != null || config().savedUserLogins().contains(session.bedrockUsername());
     }
 
-    public void saveAuthChain(@NonNull String bedrockName, @NonNull String authChain) {
-        if (!config().savedUserLogins().contains(bedrockName)) {
+    @Nullable
+    public String authChainFor(@NonNull GeyserSession session) {
+        JavaCredentialStore store = this.javaCredentialStore;
+        if (store != null) {
+            try {
+                return store.load(session);
+            } catch (Throwable t) {
+                getLogger().error("Java credential store failed to load the login of " + session.bedrockUsername() + "!", t);
+                return null;
+            }
+        }
+        return savedAuthChains == null ? null : savedAuthChains.get(session.bedrockUsername());
+    }
+
+    public void saveAuthChain(@NonNull GeyserSession session, @NonNull String authChain) {
+        JavaCredentialStore store = this.javaCredentialStore;
+        if (store != null) {
+            try {
+                store.save(session, authChain);
+            } catch (Throwable t) {
+                getLogger().error("Java credential store failed to save the login of " + session.bedrockUsername() + "!", t);
+            }
+            return;
+        }
+
+        String bedrockName = session.bedrockUsername();
+        if (savedAuthChains == null || !config().savedUserLogins().contains(bedrockName)) {
             // Do not save this login
             return;
         }

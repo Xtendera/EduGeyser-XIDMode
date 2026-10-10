@@ -218,16 +218,14 @@ public class SkinProvider {
         Cape cape = null;
         SkinGeometry geometry = SkinGeometry.WIDE;
 
-        if (GeyserImpl.getInstance().config().java().authType() != AuthType.ONLINE) {
-            // Let's see if this player is a Bedrock player, and if so, let's pull their skin.
-            GeyserSession session = GeyserImpl.getInstance().connectionByUuid(uuid);
-            if (session != null) {
-                String skinId = session.getClientData().getSkinId();
-                skin = CACHED_BEDROCK_SKINS.getIfPresent(skinId);
-                String capeId = session.getClientData().getCapeId();
-                cape = CACHED_BEDROCK_CAPES.getIfPresent(capeId);
-                geometry = cachedGeometry.getOrDefault(uuid, geometry);
-            }
+        // Let's see if this player is a Bedrock player without a Java account, and if so, let's pull their skin.
+        GeyserSession session = GeyserImpl.getInstance().connectionByUuid(uuid);
+        if (session != null && session.remoteServer().authType() != AuthType.ONLINE) {
+            String skinId = session.getClientData().getSkinId();
+            skin = CACHED_BEDROCK_SKINS.getIfPresent(skinId);
+            String capeId = session.getClientData().getCapeId();
+            cape = CACHED_BEDROCK_CAPES.getIfPresent(capeId);
+            geometry = cachedGeometry.getOrDefault(uuid, geometry);
         }
 
         if (skin == null) {

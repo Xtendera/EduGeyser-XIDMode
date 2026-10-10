@@ -59,6 +59,7 @@ import org.geysermc.geyser.api.pack.PackCodec;
 import org.geysermc.geyser.api.pack.ResourcePack;
 import org.geysermc.geyser.api.pack.ResourcePackManifest;
 import org.geysermc.geyser.api.pack.option.ResourcePackOption;
+import org.geysermc.geyser.api.util.PlatformType;
 import org.geysermc.geyser.event.type.SessionLoadResourcePacksEventImpl;
 import org.geysermc.geyser.network.nethernet.NetherNetGeyserPeer;
 import org.geysermc.geyser.network.netty.BedrockEncryptionControl;
@@ -226,7 +227,16 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         geyser.getSessionManager().addPendingSession(session);
 
         // Fire SessionInitializeEvent here as we now know the client data
-        geyser.eventBus().fire(new SessionInitializeEvent(session));
+        SessionInitializeEvent initializeEvent = new SessionInitializeEvent(session, session.remoteServer());
+        geyser.eventBus().fire(initializeEvent);
+        if (session.isClosed()) {
+            // An extension disconnected the player
+            return PacketSignal.HANDLED;
+        }
+        // Don't allow changing the remote server when it's not up to us; see GeyserSession#connectDownstream
+        if (geyser.platformType() == PlatformType.STANDALONE) {
+            session.remoteServer(initializeEvent.remoteServer());
+        }
 
         PlayStatusPacket playStatus = new PlayStatusPacket();
         playStatus.setStatus(PlayStatusPacket.Status.LOGIN_SUCCESS);
@@ -269,7 +279,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
         switch (packet.getStatus()) {
             case COMPLETED -> {
                 finishedResourcePackSending = true;
-                if (geyser.config().java().authType() != AuthType.ONLINE) {
+                if (session.remoteServer().authType() != AuthType.ONLINE) {
                     session.authenticate(session.getAuthData().name());
                 } else if (!couldLoginUserByName(session.getAuthData().name())) {
                     // We must spawn the white world
@@ -316,8 +326,8 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
     }
 
     private boolean couldLoginUserByName(String bedrockUsername) {
-        if (geyser.config().savedUserLogins().contains(bedrockUsername)) {
-            String authChain = geyser.authChainFor(bedrockUsername);
+        if (geyser.canSaveAuthChain(session)) {
+            String authChain = geyser.authChainFor(session);
             if (authChain != null) {
                 geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.auth.stored_credentials", session.getAuthData().name()));
                 session.authenticateWithAuthChain(authChain);

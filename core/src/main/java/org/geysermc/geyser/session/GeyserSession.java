@@ -1098,7 +1098,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
                 new GameProfile(mcProfile.getId(), mcProfile.getName()),
                 mcToken.getToken()
             );
-            geyser.saveAuthChain(bedrockUsername(), GeyserImpl.GSON.toJson(JavaAuthManager.toJson(authManager)));
+            geyser.saveAuthChain(this, GeyserImpl.GSON.toJson(JavaAuthManager.toJson(authManager)));
             return Boolean.TRUE;
         }).whenComplete((successful, ex) -> {
             if (this.closed) {
@@ -1191,7 +1191,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
             }
 
             // Save our auth chain for later use
-            geyser.saveAuthChain(bedrockUsername(), GeyserImpl.GSON.toJson(JavaAuthManager.toJson(result)));
+            geyser.saveAuthChain(this, GeyserImpl.GSON.toJson(JavaAuthManager.toJson(result)));
             return true;
         }).getNow(false);
     }

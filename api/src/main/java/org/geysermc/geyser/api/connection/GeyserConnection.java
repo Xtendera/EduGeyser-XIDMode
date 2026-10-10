@@ -76,6 +76,13 @@ public interface GeyserConnection extends Connection, CommandSource {
     void closeForm();
 
     /**
+     * Disconnects the player from Geyser and the Java server.
+     *
+     * @param reason the message shown on the player's disconnect screen
+     */
+    void disconnect(String reason);
+
+    /**
      * Gets the Bedrock protocol version of the player.
      */
     int protocolVersion();

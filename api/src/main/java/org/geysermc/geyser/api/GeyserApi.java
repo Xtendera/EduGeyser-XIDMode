@@ -28,6 +28,7 @@ package org.geysermc.geyser.api;
 import org.geysermc.api.Geyser;
 import org.geysermc.api.GeyserApiBase;
 import org.geysermc.api.util.ApiVersion;
+import org.geysermc.geyser.api.auth.JavaCredentialStore;
 import org.geysermc.geyser.api.command.CommandSource;
 import org.geysermc.geyser.api.connection.GeyserConnection;
 import org.geysermc.geyser.api.event.EventBus;
@@ -100,6 +101,20 @@ public interface GeyserApi extends GeyserApiBase {
      * @return the default remote server used within Geyser
      */
     RemoteServer defaultRemoteServer();
+
+    /**
+     * Gets the {@link JavaCredentialStore} used to save Microsoft logins, if one is registered.
+     *
+     * @return the registered credential store, or null if Geyser uses the {@code saved-user-logins} config option
+     */
+    @Nullable JavaCredentialStore javaCredentialStore();
+
+    /**
+     * Registers a {@link JavaCredentialStore} that replaces the {@code saved-user-logins} config option.
+     *
+     * @param store the credential store, or null to go back to the {@code saved-user-logins} config option
+     */
+    void javaCredentialStore(@Nullable JavaCredentialStore store);
 
     /**
      * Gets the {@link BedrockListener} used for listening
